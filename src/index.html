@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="">
+
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+
+  <title>
+    <%= htmlWebpackPlugin.options.title %>
+  </title>
+
+  <meta name="description" content="<%= htmlWebpackPlugin.options.title %>">
+
+</head>
+
+<body>
+  <h2> Genetic Algo </h2>
+  <form class="settings">
+    <div class="container">
+      <div class="row">
+        <div class="col-6">
+          <div class="form-group row">
+            <div class="col-12">
+              <label for="rangeFrom">Range</label>
+            </div>
+            <div class="col-6">
+              <div class="input-group">
+                <span class="input-group-addon">From</span>
+                <input type="number" class="form-control" id="rangeFrom" name="rangeFrom" value="-15" />
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="input-group">
+                <span class="input-group-addon">To</span>
+                <input type="number" class="form-control" id="rangeTo" name="rangeTo" value="12" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group col-3">
+          <label for="generationLimit">Generation limit</label>
+          <input type="number" class="form-control" id="generationLimit" name="generationLimit" min="0" value="60" />
+        </div>
+        <div class="form-group col-3">
+          <label for="mutationProbability">Mutation Probability</label>
+          <input type="number" class="form-control" id="mutationProbability" name="mutationProbability" min="0" max="1" value="0.4" step="0.05" />
+        </div>
+        <div class="form-group col-3">
+          <label for="populationLimit">Population limit</label>
+          <input type="number" class="form-control" id="populationLimit" name="populationLimit" min="0" value="12" />
+        </div>
+        <div class="form-group col-3">
+          <label for="offspringPercent">Offspring Percent</label>
+          <input type="number" class="form-control" id="offspringPercent" name="offspringPercent" min="0" max="1" value="0.35" step="0.05" />
+        </div>
+        <div class="form-group col-3">
+          <label for="updateTime">Update time</label>
+          <input type="number" class="form-control" id="updateTime" name="updateTime" min="0" value="400" />
+        </div>
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <button type="button" class="btn btn-danger" id="stop">Stop</button>
+          <button type="button" class="btn btn-primary" id="start">Start</button>
+        </div>
+      </div>
+    </div>
+  </form>
+  <div id="chart" style="width:100%;height:500px;"></div>
+
+</body>
+
+</html>

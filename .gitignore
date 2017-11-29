@@ -1,0 +1,11 @@
+# Build results
+.idea/
+dist/
+typings/**/*
+
+# Others
+~$*
+*~
+node_modules/
+src/build/
+coverage/
