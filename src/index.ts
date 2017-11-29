@@ -1,10 +1,10 @@
-// import * as Plotly from 'plotly.js';
 declare function require(moduleName: string): any;
-const Plotly = require('plotly.js/lib/index-basic.js');
+let vis = require('vis');
 import $ = require("jquery");
 
-import {GeneticAlgorithm} from './algorightm';
-import {Range} from './types';
+import { GeneticAlgorithm } from './algorightm';
+import { Range } from './types';
+import { FitnessFunc } from './chromosome';
 
 type AppConstructorParams = {
     populationLimit: number,
@@ -12,10 +12,17 @@ type AppConstructorParams = {
     offspringPercent: number,
     mutationProbability: number,
     range: Range,
-    func: (x: number) => number,
+    func: (x: number, y: number) => number,
     canvasId: string,
+    canvasId2: string,
     updateTime: number
 };
+
+export type DataItem = {
+    x: number
+    y: number
+    z: number
+}
 
 export default class App {
     public infoElement: HTMLElement;
@@ -26,35 +33,36 @@ export default class App {
     private offspringPercent: number;
     private mutationProbability: number;
     private range: Range;
-    private func: (x: number) => number;
+    private func: FitnessFunc;
     private canvasId: string;
+    private canvasId2: string;
     private updateTime: number;
+    private funcDirtyPoints: DataItem[];
+    private funcGraph: any;
+    private funcGraph2: any;
 
     private isStop: boolean = false;
 
-    constructor(
-        {
-            populationLimit,
-            generationLimit,
-            offspringPercent,
-            mutationProbability,
-            range,
-            func,
-            canvasId,
-            updateTime
-        }: AppConstructorParams
-    ) {
-        this.populationLimit = populationLimit;
-        this.generationLimit = generationLimit;
-        this.offspringPercent = offspringPercent;
-        this.mutationProbability = mutationProbability;
-        this.range = range;
-        this.func = func;
-        this.canvasId = canvasId;
-        this.updateTime = updateTime;
+    constructor(params: AppConstructorParams) {
+        this.populationLimit = params.populationLimit;
+        this.generationLimit = params.generationLimit;
+        this.offspringPercent = params.offspringPercent;
+        this.mutationProbability = params.mutationProbability;
+        this.range = params.range;
+        this.func = params.func;
+        this.canvasId = params.canvasId;
+        this.canvasId2 = params.canvasId2;
+        this.updateTime = params.updateTime;
 
-        this.algorithm = new GeneticAlgorithm(populationLimit, generationLimit, offspringPercent, mutationProbability, range, func);
-        this.init()
+        this.algorithm = new GeneticAlgorithm({
+            fitnessFunc: params.func,
+            populationAmount: params.populationLimit,
+            generationAmount: params.generationLimit,
+            offSpringPercent: params.offspringPercent,
+            mutationProbability: params.mutationProbability,
+            range: params.range
+        });
+        this.init();
     }
 
     public start(){
@@ -74,7 +82,12 @@ export default class App {
     public destroy() {
         this.stop();
         document.body.removeChild(this.infoElement);
-        Plotly.purge(this.canvasId);
+        if (this.funcGraph !== undefined) {
+            this.initAlgorithmGraph();
+        }
+        if (this.funcGraph2 !== undefined) {
+            this.initFuncGraph();
+        }
     }
 
 
@@ -88,54 +101,82 @@ export default class App {
         document.body.appendChild(this.infoElement);
 
 
-        let dirtyPoints = this.calcFuncPoints(this.range);
-        Plotly.plot(this.canvasId, [
-            {
-                x: [0],
-                y: [0],
-                mode: 'markers'
-            },
-            {
-                x: dirtyPoints.x,
-                y: dirtyPoints.y,
-                mode: 'lines',
-                showlegend: false,
-                fill: 'toself',
-            }
-        ], {
-            xaxis: {range: [this.range.from, this.range.to]},
-            yaxis: {range: [-100, 100]}
-        })
+        this.initFuncGraph();
+        this.initAlgorithmGraph();
+    }
 
+    private initFuncGraph(){
+        this.funcDirtyPoints = this.calcFuncPoints(this.range);
+        const data = new vis.DataSet();
 
+        for (let i = 0; i < this.funcDirtyPoints.length; i++) {
+            let item = this.funcDirtyPoints[i];
+            data.add({id:i,x:item.x,y:item.y,z:item.z,style:item.z});
+        }
+
+        // specify options
+        const options = {
+            width:  '300px',
+            height: '200px',
+            style: 'surface',
+            showPerspective: true,
+            showGrid: true,
+            showShadow: false,
+            keepAspectRatio: true,
+            verticalRatio: 0.5,
+        };
+
+        // Instantiate our graph object.
+        const container = document.getElementById(this.canvasId);
+        this.funcGraph2 = new vis.Graph3d(container, data, options);
+    }
+
+    private initAlgorithmGraph(){
+        const options = {
+            width:  '100%',
+            height: '100%',
+            style: 'dot',
+            xCenter: '50%',
+            yCenter: '50%',
+            xStep: 2,
+            yStep: 2,
+            showPerspective: true,
+            showGrid: true,
+            showShadow: false,
+            xBarWidth: 200,
+            yBarWidth: 200,
+            // zBarWidth: 400,
+            yMin: -6,
+            yMax: 6,
+            xMax: 6,
+            xMin: -6,
+            zMax: 50,
+            zMin: 0,
+            keepAspectRatio: false,
+            verticalRatio: 0.5,
+        };
+        const data = new vis.DataSet();
+        data.add({id:0,x:0,y:0,z:0,style:0});
+        const container = document.getElementById(this.canvasId2);
+        this.funcGraph = new vis.Graph3d(container, data, options);
     }
 
     private update(){
-        let chromosomes = this.algorithm.currentGeneration.chromosomes;
+        const chromosomes = this.algorithm.currentGeneration.chromosomes;
 
-        let x: number[] = [];
-        let y: number[] = [];
+        const data = new vis.DataSet();
+        let i = 0;
         for(let chromosome of chromosomes){
-            x.push(chromosome.x);
-            y.push(chromosome.fitness);
+            data.add({ id: i++, x: chromosome.x, y:chromosome.y, z:chromosome.z, style: chromosome.z  });
         }
 
-        Plotly.animate(this.canvasId, [{
-            data: [ { x, y} ],
-            traces: [0]
-        }], {
-            transition: {
-                duration: 150,
-                easing: 'cubic-in-out'
-            }
-        });
-
+        this.funcGraph.setData(data);
+        this.funcGraph.redraw();
 
         this.infoElement.innerText = `Population: #${this.algorithm.generations.length}
-            The fittest: ${this.algorithm.currentGeneration.fittest.fitness}
-            Average fitness: ${this.algorithm.currentGeneration.averageFitness}
+            The fittest: ${this.algorithm.currentGeneration.fittest.z}
+            Average fit: ${this.algorithm.currentGeneration.averageFitness}
         `;
-        console.log('updated');
     }
 
     private next(){
@@ -143,20 +184,16 @@ export default class App {
     }
 
     private calcFuncPoints(range: { from: number, to: number}){
-        let accurate = 300;
-        let xArray: number[] = [range.from];
-        let yArray: number[] = [-150];
+        const accurate = 30;
+        const data: DataItem[] = [];
         let step = Math.abs(range.to - range.from) / accurate;
-        for(let i = range.from; i < range.to; i += step) {
-            let y = this.func(i);
-            xArray.push(i);
-            yArray.push(y);
+        for(let x = range.from; x < range.to; x += step) {
+            for(let y = range.from; y < range.to; y += step) {
+                let z = this.func(x, y);
+                data.push({ x, y, z });
+            }
         }
-        xArray.push(range.to);
-        yArray.push(-150);
-
-
-        return { x: xArray, y: yArray }
+        return data;
     }
 }
 
@@ -181,12 +218,13 @@ function init() {
 
         app = new App({
             range: { from: +data.rangeFrom, to: +data.rangeTo },
-            func: (x: number) => (2 - 1.5*x) * Math.sin(1.5*x - 2),
+            func: (x: number, y: number) => 20 + (10 * Math.cos(2 * Math.PI * x) - x ^ 2) + (10 * Math.cos(2 * Math.PI * y) - y ^ 2),
             generationLimit: +data.generationLimit,
             mutationProbability: +data.mutationProbability,
             populationLimit: +data.populationLimit,
             offspringPercent: +data.offspringPercent,
             canvasId: 'chart',
+            canvasId2: 'chart2',
             updateTime: +data.updateTime
         });
 
